@@ -45,7 +45,7 @@ def load_channels_from_file():
         except:
             pass
     
-    default_str = "@buzzbilgiler,@TURKINFORMmedya,@turkiyedenhaberler24,@asayisberkemaltr,@conflict_tr,@haberstudio,@OrduGazete,@muhafizhaber,@ww3media,@agentokato,@rootwebofficial,@haberlerp,@BreakingNewsTurkiye,@Sansursuzmedya18,@solcugazete,@bpthaber,@trthaberdijital,@habermha,@gundemedairhs,@SansursuzHaberResmi,@buzznews_tr,@darkwebhabertg"
+    default_str = "@BuyukTurkHaber,@buzzbilgiler,@TURKINFORMmedya,@turkiyedenhaberler24,@asayisberkemaltr,@conflict_tr,@haberstudio,@OrduGazete,@muhafizhaber,@ww3media,@agentokato,@rootwebofficial,@haberlerp,@BreakingNewsTurkiye,@Sansursuzmedya18,@solcugazete,@bpthaber,@trthaberdijital,@habermha,@gundemedairhs,@SansursuzHaberResmi,@buzznews_tr,@darkwebhabertg"
     return [c.strip() for c in default_str.split(',') if c.strip()]
 
 def get_image_hash(image_bytes):
@@ -417,3 +417,4 @@ elif not st.session_state.data_fetched and not st.session_state.hunting_mode:
 if st.session_state.hunting_mode:
     time.sleep(15)
     st.rerun()
+
