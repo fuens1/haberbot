@@ -25,7 +25,7 @@ def load_channels_from_file():
         except:
             pass
     
-    default_str = "@conflict_tr,@haberstudio,@OrduGazete,@muhafizhaber,@ww3media,@agentokato,@rootwebofficial,@haberlerp,@BreakingNewsTurkiye,@Sansursuzmedya18,@solcugazete,@bpthaber,@trthaberdijital,@habermha,@gundemedairhs,@SansursuzHaberResmi,@buzznews_tr,@darkwebhabertg"
+    default_str = "@buzzbilgiler,@TURKINFORMmedya,@turkiyedenhaberler24,@asayisberkemaltr,@conflict_tr,@haberstudio,@OrduGazete,@muhafizhaber,@ww3media,@agentokato,@rootwebofficial,@haberlerp,@BreakingNewsTurkiye,@Sansursuzmedya18,@solcugazete,@bpthaber,@trthaberdijital,@habermha,@gundemedairhs,@SansursuzHaberResmi,@buzznews_tr,@darkwebhabertg"
     return [c.strip() for c in default_str.split(',') if c.strip()]
 
 # --- SESSION STATE ---
@@ -339,3 +339,4 @@ if st.session_state.news_data:
 
 elif not st.session_state.data_fetched and not st.session_state.hunting_mode:
     st.info("👈 Sol menüden Manuel veya Canlı modu başlatın.")
+
