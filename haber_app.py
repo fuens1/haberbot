@@ -13,7 +13,7 @@ SESSION_NAME = 'speed_news_session'
 JSON_FILE = 'kanal_listesi.json'
 
 # --- SAYFA YAPISI ---
-st.set_page_config(page_title="Haber Pro v9", page_icon="📥", layout="wide")
+st.set_page_config(page_title="🚨 Telegram Haber Analizi", page_icon="📥", layout="wide")
 
 # --- YARDIMCI FONKSİYONLAR ---
 def load_channels_from_file():
@@ -43,7 +43,7 @@ if 'hunting_mode' not in st.session_state:
 if 'last_check_time' not in st.session_state:
     st.session_state.last_check_time = datetime.now(timezone.utc)
 
-st.title("📥 Haber Pro v9: JSON İndirme Özelliği")
+st.title("📥 🚨 Telegram Haber Analizi")
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -132,7 +132,7 @@ with st.sidebar:
             start_dt = datetime.combine(d1, datetime.min.time()).replace(tzinfo=timezone.utc)
             end_dt = datetime.combine(d2, datetime.max.time()).replace(tzinfo=timezone.utc)
 
-        msg_limit = st.slider("Limit", 10, 200, 40)
+        msg_limit = st.slider("Limit", 2, 200, 40)
         fetch_btn = st.button("🚀 Verileri Çek", type="primary", disabled=(len(final_target_list) == 0))
 
     with tab2:
@@ -321,3 +321,4 @@ if st.session_state.news_data:
                 st.link_button("🔗 Git", item['link'])
 elif not st.session_state.data_fetched and not st.session_state.hunting_mode:
     st.info("👈 Manuel veya Canlı modu başlatın.")
+
