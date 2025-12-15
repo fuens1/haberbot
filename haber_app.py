@@ -12,14 +12,21 @@ API_HASH = 'f03a12cf975db6385bcc12dda7ef878d'
 SESSION_NAME = 'speed_news_session'
 JSON_FILE = 'kanal_listesi.json'
 
-# --- REKLAM FİLTRESİ (YENİ) ---
-# Bu kelimelerden herhangi biri mesajda geçerse, o mesaj listeye eklenmez.
+# --- GÜÇLENDİRİLMİŞ REKLAM FİLTRESİ ---
+# Listeyi görseldeki kelimeleri de (reklamveren, komisyon vb.) kapsayacak şekilde genişlettim.
 BLACKLIST_KEYWORDS = [
-    "#reklam", " reklam ", "(reklam)", "sponsorlu", "#işbirliği", 
-    "iş birliği", "promo", "discount", "çekiliş", 
-    "bet", "casino", "slot", "bonus", "freespin", 
-    "gates of olympus", "bonanza", "kazanç", "yatırım tavsiyesi değildir",
-    "giriş için", "tıkla kazan", "üyelik"
+    # Bahis / Casino
+    "bet", "casino", "slot", "bonus", "freespin", "gates of olympus", 
+    "bonanza", "tıkla kazan", "giriş için", "deneme bonusu", "çevrimsiz",
+    
+    # Reklam / Tanıtım Genel
+    "#reklam", " reklam", "(reklam)", "reklamveren", "sponsorlu", 
+    "#işbirliği", "iş birliği", "tanıtım", "promo", "discount", "çekiliş",
+    
+    # Kripto / Finans Reklamları (Görseldeki gibi)
+    "%0 komisyon", "limit emri komisyonu", "referans kodu", "üyelik", 
+    "yatırım tavsiyesi değildir", "ytd", "kazanç fırsatı", "avantajlı",
+    "hoş geldin ödülü", "ayrıcalıklar", "şimdi seninle"
 ]
 
 # --- ZAMAN DİLİMİ AYARI (UTC+2) ---
@@ -62,7 +69,6 @@ st.title("📥 🚨 Telegram Haber Analizi")
 with st.sidebar:
     st.header("1. Kanal Havuzu")
     
-    # Text area değerini session state'den al
     current_list_str = ",".join(st.session_state.prepared_channels)
     
     raw_channels_input = st.text_area(
@@ -77,10 +83,8 @@ with st.sidebar:
         channel_list = list(set(channel_list))
         channel_list.sort()
         
-        # Hafızayı güncelle
         st.session_state.prepared_channels = channel_list
         
-        # Checkbox'ları sıfırla/güncelle
         for ch in channel_list:
             if f"pre_{ch}" not in st.session_state:
                 st.session_state[f"pre_{ch}"] = True
@@ -201,8 +205,7 @@ async def fetch_news_logic(channels, start, end, limit):
                     elif hasattr(msg, 'raw_text') and msg.raw_text: text_content = msg.raw_text
                     if text_content is None: text_content = ""
 
-                    # --- REKLAM KONTROLÜ (YENİ) ---
-                    # Metni küçük harfe çevirip yasaklı kelime var mı diye bakıyoruz.
+                    # --- GÜÇLENDİRİLMİŞ FİLTRE ---
                     text_lower = text_content.lower()
                     is_ad = False
                     for bad_word in BLACKLIST_KEYWORDS:
@@ -211,8 +214,8 @@ async def fetch_news_logic(channels, start, end, limit):
                             break
                     
                     if is_ad:
-                        continue # Eğer reklam ise bu mesajı atla
-                    # ------------------------------
+                        continue 
+                    # -----------------------------
 
                     thumb_data = None
                     media_type = "text"
