@@ -4,7 +4,8 @@ from telethon import TelegramClient
 from datetime import datetime, timezone, timedelta
 import os
 import time
-import json 
+import json
+import hashlib  # Resim karşılaştırması için eklendi
 
 # --- AYARLAR ---
 API_ID = 32583113
@@ -46,6 +47,12 @@ def load_channels_from_file():
     
     default_str = "@buzzbilgiler,@TURKINFORMmedya,@turkiyedenhaberler24,@asayisberkemaltr,@conflict_tr,@haberstudio,@OrduGazete,@muhafizhaber,@ww3media,@agentokato,@rootwebofficial,@haberlerp,@BreakingNewsTurkiye,@Sansursuzmedya18,@solcugazete,@bpthaber,@trthaberdijital,@habermha,@gundemedairhs,@SansursuzHaberResmi,@buzznews_tr,@darkwebhabertg"
     return [c.strip() for c in default_str.split(',') if c.strip()]
+
+def get_image_hash(image_bytes):
+    """Resim verisinden MD5 hash üretir (Resim karşılaştırması için)."""
+    if image_bytes is None:
+        return None
+    return hashlib.md5(image_bytes).hexdigest()
 
 # --- SESSION STATE ---
 if 'news_data' not in st.session_state:
@@ -229,7 +236,9 @@ async def fetch_news_logic(channels, start, end, limit):
                         'thumb': thumb_data,
                         'media_type': media_type,
                         'link': f"https://t.me/{real_username}/{msg.id}",
-                        'grouped_id': msg.grouped_id
+                        'grouped_id': msg.grouped_id,
+                        # Resim Hash'i (Deduplication için)
+                        'img_hash': get_image_hash(thumb_data)
                     }
 
                     if msg.grouped_id:
@@ -271,18 +280,31 @@ def run_fetch(channels, start, end, limit):
 
 # --- ANA AKIŞ: VERİ TOPLAMA ---
 if st.session_state.hunting_mode:
-    # --- MESAJ BURAYA TAŞINDI ---
+    # Bilgilendirme mesajı en tepeye
     st.info("🟢 CANLI HABER AVCISI AKTİF - İzleniyor... (Her 15 saniyede bir güncellenir)")
     
     # 1. Veriyi çek
     now_current = datetime.now(MY_TZ)
     new_items = run_fetch(final_target_list, st.session_state.last_check_time, now_current, limit=5)
     
-    # 2. Listeye ekle (Toast YOK)
+    # 2. Listeye ekle (Tekrarları önleyerek)
     if new_items:
+        # Önce tarihe göre sırala
         new_items.sort(key=lambda x: x['tarih'])
+        
         for item in new_items:
-            exists = any(x['link'] == item['link'] for x in st.session_state.news_data)
+            # Kontrol: Link aynı mı VEYA Resim Hash'i aynı mı?
+            exists = False
+            for old_item in st.session_state.news_data:
+                # Link kontrolü
+                if old_item['link'] == item['link']:
+                    exists = True
+                    break
+                # Resim kontrolü (Eğer resim varsa)
+                if item['img_hash'] is not None and old_item['img_hash'] == item['img_hash']:
+                    exists = True
+                    break
+            
             if not exists:
                 st.session_state.news_data.insert(0, item)
     
@@ -297,19 +319,45 @@ elif fetch_btn:
         items = run_fetch(final_target_list, start_dt, end_dt, msg_limit)
         
         if items:
-            unique = []
-            seen = set()
-            items.sort(key=lambda x: x['tarih'], reverse=True)
-            for item in items:
-                txt = item['text'] if item['text'] else ""
-                content_hash = txt.strip()
-                if len(content_hash) > 20 and content_hash in seen: continue
-                if len(content_hash) > 20: seen.add(content_hash)
-                unique.append(item)
+            # --- MANTIKSAL DEĞİŞİKLİK: İLK PAYLAŞILANI TUTMAK ---
+            # 1. Önce ESKİDEN YENİYE sırala (Böylece ilk gördüğümüz, en eski tarihli olur)
+            items.sort(key=lambda x: x['tarih'], reverse=False)
             
-            st.session_state.news_data = unique
+            unique_items = []
+            seen_texts = set()
+            seen_images = set()
+            
+            for item in items:
+                # Metin Hash'i (Text Deduplication)
+                txt = item['text'] if item['text'] else ""
+                content_hash = hashlib.md5(txt.strip().encode('utf-8')).hexdigest() if len(txt.strip()) > 20 else None
+                
+                # Resim Hash'i
+                img_hash = item['img_hash']
+                
+                is_duplicate = False
+                
+                # Metin tekrarı kontrolü
+                if content_hash and content_hash in seen_texts:
+                    is_duplicate = True
+                
+                # Resim tekrarı kontrolü (Eğer resim varsa)
+                if img_hash and img_hash in seen_images:
+                    is_duplicate = True
+                
+                if not is_duplicate:
+                    unique_items.append(item)
+                    if content_hash:
+                        seen_texts.add(content_hash)
+                    if img_hash:
+                        seen_images.add(img_hash)
+            
+            # 2. Listeyi tekrar YENİDEN ESKİYE (Ekranda göstermek için) çevir
+            unique_items.sort(key=lambda x: x['tarih'], reverse=True)
+            
+            st.session_state.news_data = unique_items
             st.session_state.data_fetched = True
-            st.success(f"{len(unique)} haber bulundu.")
+            st.success(f"{len(unique_items)} haber bulundu.")
         else:
             st.warning("Haber bulunamadı.")
 
@@ -366,7 +414,6 @@ elif not st.session_state.data_fetched and not st.session_state.hunting_mode:
     st.info("👈 Manuel veya Canlı modu başlatın.")
 
 # --- OTOMATİK YENİLEME MANTIĞI (En Sonda) ---
-# Ekran render edildikten SONRA bekle ve yenile.
 if st.session_state.hunting_mode:
     time.sleep(15)
     st.rerun()
