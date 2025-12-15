@@ -9,11 +9,11 @@ import json
 # --- AYARLAR ---
 API_ID = 32583113
 API_HASH = 'f03a12cf975db6385bcc12dda7ef878d'
-SESSION_NAME = 'speed_news_session'
+SESSION_NAME = 'final_live_v9'
 JSON_FILE = 'kanal_listesi.json'
 
 # --- SAYFA YAPISI ---
-st.set_page_config(page_title="🚨 Telegram Haber Analizi", page_icon="📥", layout="wide")
+st.set_page_config(page_title="Haber Pro v9", page_icon="📥", layout="wide")
 
 # --- YARDIMCI FONKSİYONLAR ---
 def load_channels_from_file():
@@ -25,7 +25,7 @@ def load_channels_from_file():
         except:
             pass
     
-    default_str = "@buzzbilgiler,@TURKINFORMmedya,@turkiyedenhaberler24,@asayisberkemaltr,@conflict_tr,@haberstudio,@OrduGazete,@muhafizhaber,@ww3media,@agentokato,@rootwebofficial,@haberlerp,@BreakingNewsTurkiye,@Sansursuzmedya18,@solcugazete,@bpthaber,@trthaberdijital,@habermha,@gundemedairhs,@SansursuzHaberResmi,@buzznews_tr,@darkwebhabertg"
+    default_str = "@conflict_tr,@haberstudio,@OrduGazete,@muhafizhaber,@ww3media,@agentokato,@rootwebofficial,@haberlerp,@BreakingNewsTurkiye,@Sansursuzmedya18,@solcugazete,@bpthaber,@trthaberdijital,@habermha,@gundemedairhs,@SansursuzHaberResmi,@buzznews_tr,@darkwebhabertg"
     return [c.strip() for c in default_str.split(',') if c.strip()]
 
 # --- SESSION STATE ---
@@ -43,7 +43,7 @@ if 'hunting_mode' not in st.session_state:
 if 'last_check_time' not in st.session_state:
     st.session_state.last_check_time = datetime.now(timezone.utc)
 
-st.title("📥 🚨 Telegram Haber Analizi")
+st.title("📥 Haber Pro v9: JSON İndirme Özelliği")
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -74,7 +74,8 @@ with st.sidebar:
                 
         st.success(f"Liste hafızaya alındı! ({len(channel_list)} kanal)")
 
-    # --- İNDİRME BUTONU ---
+    # --- İNDİRME BUTONU (YENİ) ---
+    # Mevcut hafızadaki listeyi JSON formatına çevir
     json_string = json.dumps(st.session_state.prepared_channels, indent=2)
     
     st.download_button(
@@ -119,35 +120,19 @@ with st.sidebar:
     
     with tab1:
         st.caption("Geçmiş tarama")
-        # GÜNCELLEME: Varsayılan olarak index=1 (Özel Tarih) yapıldı ki saat kutusunu hemen görebilin.
-        time_mode = st.radio("Zaman:", ["Son 24 Saat", "Özel Tarih"], index=1)
+        time_mode = st.radio("Zaman:", ["Son 24 Saat", "Özel Tarih"], index=0)
         
         if time_mode == "Son 24 Saat":
             end_dt = datetime.now(timezone.utc)
             start_dt = end_dt - timedelta(hours=24)
         else:
-            # --- YENİ EKLENEN KISIM (BURASI GÖRÜNMÜYORDU) ---
-            st.info("💡 Bitiş zamanı otomatik olarak 'ŞU AN' alınır.")
             col1, col2 = st.columns(2)
-            
-            with col1:
-                d1 = st.date_input("📅 Başlangıç Tarihi", value=datetime.now())
-            with col2:
-                # Saat varsayılan olarak 00:00 gelir
-                t1 = st.time_input("⏰ Başlangıç Saati", value=datetime.min.time()) 
-            
-            # Başlangıç: Seçilen Gün + Seçilen Saat
-            # replace(tzinfo=timezone.utc) ekleyerek Telegram saatiyle uyumlu hale getiriyoruz.
-            try:
-                start_dt = datetime.combine(d1, t1).replace(tzinfo=timezone.utc)
-            except:
-                # Hata durumunda (timezone çakışması vs) basit bir fallback
-                start_dt = datetime.combine(d1, t1).astimezone(timezone.utc)
-                
-            # Bitiş: Şu an (Anlık)
-            end_dt = datetime.now(timezone.utc)
+            d1 = col1.date_input("Başlangıç", value=datetime.now())
+            d2 = col2.date_input("Bitiş", value=datetime.now())
+            start_dt = datetime.combine(d1, datetime.min.time()).replace(tzinfo=timezone.utc)
+            end_dt = datetime.combine(d2, datetime.max.time()).replace(tzinfo=timezone.utc)
 
-        msg_limit = st.slider("Limit (Kanal Başına)", 2, 200, 40)
+        msg_limit = st.slider("Limit", 10, 200, 40)
         fetch_btn = st.button("🚀 Verileri Çek", type="primary", disabled=(len(final_target_list) == 0))
 
     with tab2:
@@ -273,7 +258,7 @@ elif fetch_btn:
     st.session_state.news_data = []
     st.session_state.data_fetched = False
     
-    with st.spinner('Haberler Alınıyor...'):
+    with st.spinner('Arşiv taranıyor...'):
         items = run_fetch(final_target_list, start_dt, end_dt, msg_limit)
         
         if items:
