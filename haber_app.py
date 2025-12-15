@@ -269,29 +269,22 @@ def run_fetch(channels, start, end, limit):
     asyncio.set_event_loop(loop)
     return loop.run_until_complete(fetch_news_logic(channels, start, end, limit))
 
-# --- ANA AKIŞ ---
+# --- ANA AKIŞ: VERİ TOPLAMA ---
 if st.session_state.hunting_mode:
-    st.info("🟢 CANLI HABER AVCISI AKTİF - İzleniyor...")
+    # 1. Veriyi çek
     now_current = datetime.now(MY_TZ)
-    
     new_items = run_fetch(final_target_list, st.session_state.last_check_time, now_current, limit=5)
     
+    # 2. Listeye ekle (Toast YOK)
     if new_items:
         new_items.sort(key=lambda x: x['tarih'])
-        count = 0
         for item in new_items:
             exists = any(x['link'] == item['link'] for x in st.session_state.news_data)
             if not exists:
                 st.session_state.news_data.insert(0, item)
-                count += 1
-        
-        if count > 0:
-            st.toast(f"🚨 {count} YENİ HABER!", icon="🔥")
     
     st.session_state.last_check_time = now_current
     st.session_state.data_fetched = True
-    time.sleep(15)
-    st.rerun()
 
 elif fetch_btn:
     st.session_state.news_data = []
@@ -317,19 +310,20 @@ elif fetch_btn:
         else:
             st.warning("Haber bulunamadı.")
 
-# --- SONUÇLAR ---
+# --- SONUÇLARI EKRANA BAS ---
 if st.session_state.news_data:
     st.divider()
     
-    # --- YENİ EKLENEN TEMİZLEME BUTONU ---
-    # Sonuçlar varsa, üst kısımda temizleme butonu gösterir.
+    # Temizleme Butonu
     if st.button("🗑️ LİSTEYİ TEMİZLE", use_container_width=True, type="secondary"):
         st.session_state.news_data = []
         st.session_state.data_fetched = False
         st.rerun()
-    # -------------------------------------
 
-    if not st.session_state.hunting_mode:
+    if st.session_state.hunting_mode:
+        st.info("🟢 CANLI HABER AVCISI ÇALIŞIYOR... (Her 15 saniyede bir güncellenir)")
+        display_list = st.session_state.news_data
+    else:
         st.subheader("🔎 Sonuç Filtresi")
         result_channels = sorted(list(set([item['kanal'] for item in st.session_state.news_data])))
         cols = st.columns(4)
@@ -339,10 +333,8 @@ if st.session_state.news_data:
                 if st.checkbox(f"@{ch}", value=True, key=f"post_{ch}"):
                     selected_view_channels.append(ch)
         display_list = [n for n in st.session_state.news_data if n['kanal'] in selected_view_channels]
-    else:
-        st.subheader("🔥 Canlı Akış")
-        display_list = st.session_state.news_data
 
+    # Kartları oluştur
     for item in display_list:
         with st.container(border=True):
             c1, c2 = st.columns([1, 4]) 
@@ -367,5 +359,12 @@ if st.session_state.news_data:
                 else:
                     st.info("*(Açıklama yok)*")
                 st.link_button("🔗 Git", item['link'])
+
 elif not st.session_state.data_fetched and not st.session_state.hunting_mode:
     st.info("👈 Manuel veya Canlı modu başlatın.")
+
+# --- OTOMATİK YENİLEME MANTIĞI (En Sonda) ---
+# Ekran render edildikten SONRA bekle ve yenile.
+if st.session_state.hunting_mode:
+    time.sleep(15)
+    st.rerun()
