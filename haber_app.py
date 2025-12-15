@@ -126,11 +126,15 @@ with st.sidebar:
             end_dt = datetime.now(timezone.utc)
             start_dt = end_dt - timedelta(hours=24)
         else:
+            # GÜNCELLENEN KISIM: Sadece Başlangıç Tarihi ve Saati, Bitiş Anlık
             col1, col2 = st.columns(2)
-            d1 = col1.date_input("Başlangıç", value=datetime.now())
-            d2 = col2.date_input("Bitiş", value=datetime.now())
-            start_dt = datetime.combine(d1, datetime.min.time()).replace(tzinfo=timezone.utc)
-            end_dt = datetime.combine(d2, datetime.max.time()).replace(tzinfo=timezone.utc)
+            d1 = col1.date_input("Başlangıç Tarihi", value=datetime.now())
+            t1 = col2.time_input("Başlangıç Saati", value=datetime.min.time()) # Varsayılan 00:00
+            
+            # Başlangıç: Seçilen Gün + Seçilen Saat
+            start_dt = datetime.combine(d1, t1).replace(tzinfo=timezone.utc)
+            # Bitiş: Şu an (Anlık)
+            end_dt = datetime.now(timezone.utc)
 
         msg_limit = st.slider("Limit", 2, 200, 40)
         fetch_btn = st.button("🚀 Verileri Çek", type="primary", disabled=(len(final_target_list) == 0))
@@ -321,5 +325,3 @@ if st.session_state.news_data:
                 st.link_button("🔗 Git", item['link'])
 elif not st.session_state.data_fetched and not st.session_state.hunting_mode:
     st.info("👈 Manuel veya Canlı modu başlatın.")
-
-
