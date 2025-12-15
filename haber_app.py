@@ -258,7 +258,7 @@ elif fetch_btn:
     st.session_state.news_data = []
     st.session_state.data_fetched = False
     
-    with st.spinner('Arşiv taranıyor...'):
+    with st.spinner('Haberler Alınıyor...'):
         items = run_fetch(final_target_list, start_dt, end_dt, msg_limit)
         
         if items:
@@ -321,4 +321,5 @@ if st.session_state.news_data:
                 st.link_button("🔗 Git", item['link'])
 elif not st.session_state.data_fetched and not st.session_state.hunting_mode:
     st.info("👈 Manuel veya Canlı modu başlatın.")
+
 
