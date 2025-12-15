@@ -4,18 +4,18 @@ from telethon import TelegramClient
 from datetime import datetime, timezone, timedelta
 import os
 import time
-import json 
+import json
 
 # --- AYARLAR ---
 API_ID = 32583113
 API_HASH = 'f03a12cf975db6385bcc12dda7ef878d'
-SESSION_NAME = 'final_live_v9_fix'
+SESSION_NAME = 'haber_pro_v9_timefix'
 JSON_FILE = 'kanal_listesi.json'
 
 # --- SAYFA YAPISI ---
-st.set_page_config(page_title="Haber Pro v9", page_icon="📥", layout="wide")
+st.set_page_config(page_title="Haber Pro v9.1", page_icon="⏰", layout="wide")
 
-# --- EKSİK OLAN YARDIMCI FONKSİYONLAR ---
+# --- YARDIMCI FONKSİYONLAR ---
 def load_channels_from_file():
     """Dosya varsa oku, yoksa varsayılanları döndür."""
     if os.path.exists(JSON_FILE):
@@ -34,22 +34,22 @@ if 'news_data' not in st.session_state:
 if 'data_fetched' not in st.session_state:
     st.session_state.data_fetched = False
 
-# İlk açılışta dosyadan yükle
+# Kanalları yükle
 if 'prepared_channels' not in st.session_state:
     st.session_state.prepared_channels = load_channels_from_file()
 
+# Avcı modu değişkenleri
 if 'hunting_mode' not in st.session_state:
     st.session_state.hunting_mode = False
 if 'last_check_time' not in st.session_state:
     st.session_state.last_check_time = datetime.now(timezone.utc)
 
-st.title("📥 Haber Pro v9: JSON İndirme Özelliği")
+st.title("⏰ Haber Pro v9.1: Saat Seçimi Eklendi")
 
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("1. Kanal Havuzu")
     
-    # Text area değerini session state'den al
     current_list_str = ",".join(st.session_state.prepared_channels)
     
     raw_channels_input = st.text_area(
@@ -64,25 +64,21 @@ with st.sidebar:
         channel_list = list(set(channel_list))
         channel_list.sort()
         
-        # Hafızayı güncelle
         st.session_state.prepared_channels = channel_list
         
-        # Checkbox'ları sıfırla/güncelle
         for ch in channel_list:
             if f"pre_{ch}" not in st.session_state:
                 st.session_state[f"pre_{ch}"] = True
                 
-        st.success(f"Liste hafızaya alındı! ({len(channel_list)} kanal)")
+        st.success(f"Liste güncellendi! ({len(channel_list)} kanal)")
 
     # --- İNDİRME BUTONU ---
     json_string = json.dumps(st.session_state.prepared_channels, indent=2)
-    
     st.download_button(
         label="📥 JSON Dosyasını İndir",
         data=json_string,
         file_name="kanal_listesi.json",
-        mime="application/json",
-        help="Bu dosyayı indirip GitHub'a yüklerseniz, değişiklikleriniz kalıcı olur."
+        mime="application/json"
     )
 
     st.divider()
@@ -115,27 +111,38 @@ with st.sidebar:
     # --- MOD SEÇİMİ ---
     st.header("3. Çalışma Modu")
     
-    tab1, tab2 = st.tabs(["📂 Manuel", "🚨 CANLI AVCI"])
+    tab1, tab2 = st.tabs(["📂 Manuel Arşiv", "🚨 CANLI AVCI"])
     
     with tab1:
-        st.caption("Geçmiş tarama")
-        time_mode = st.radio("Zaman:", ["Son 24 Saat", "Özel Tarih"], index=0)
+        st.caption("Geçmişe dönük tarama yapar.")
+        time_mode = st.radio("Zaman Aralığı:", ["Son 24 Saat", "Özel Tarih & Saat"], index=0)
         
         if time_mode == "Son 24 Saat":
             end_dt = datetime.now(timezone.utc)
             start_dt = end_dt - timedelta(hours=24)
         else:
-            col1, col2 = st.columns(2)
-            d1 = col1.date_input("Başlangıç", value=datetime.now())
-            d2 = col2.date_input("Bitiş", value=datetime.now())
-            start_dt = datetime.combine(d1, datetime.min.time()).replace(tzinfo=timezone.utc)
-            end_dt = datetime.combine(d2, datetime.max.time()).replace(tzinfo=timezone.utc)
+            # --- YENİ EKLENEN KISIM: SAAT SEÇİMİ ---
+            st.markdown("**Başlangıç Zamanı:**")
+            c1, c2 = st.columns(2)
+            d1 = c1.date_input("Tarih (Başlangıç)", value=datetime.now())
+            # Varsayılan saat 00:00
+            t1 = c2.time_input("Saat (Başlangıç)", value=datetime.strptime("00:00", "%H:%M").time())
+            
+            st.markdown("**Bitiş Zamanı:**")
+            c3, c4 = st.columns(2)
+            d2 = c3.date_input("Tarih (Bitiş)", value=datetime.now())
+            # Varsayılan saat şu anki saat
+            t2 = c4.time_input("Saat (Bitiş)", value=datetime.now().time())
+            
+            # Tarih ve Saati birleştirip UTC yapıyoruz
+            start_dt = datetime.combine(d1, t1).replace(tzinfo=timezone.utc)
+            end_dt = datetime.combine(d2, t2).replace(tzinfo=timezone.utc)
 
-        msg_limit = st.slider("Limit", 10, 200, 40)
+        msg_limit = st.slider("Limit (Kanal Başına)", 10, 200, 40)
         fetch_btn = st.button("🚀 Verileri Çek", type="primary", disabled=(len(final_target_list) == 0))
 
     with tab2:
-        st.caption("Otomatik izleme")
+        st.caption("Sürekli izleme yapar.")
         c_start, c_stop = st.columns(2)
         if c_start.button("▶️ BAŞLAT", type="primary"):
             st.session_state.hunting_mode = True
@@ -145,13 +152,14 @@ with st.sidebar:
             st.session_state.hunting_mode = False
             st.rerun()
 
-# --- ASYNC FONKSİYONLAR ---
+# --- ASYNC TELEGRAM FONKSİYONU ---
 async def fetch_news_logic(channels, start, end, limit):
     client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
     raw_data = []
     
     try:
         await client.start()
+        
         show_progress = not st.session_state.hunting_mode
         if show_progress:
             status = st.empty()
@@ -161,6 +169,7 @@ async def fetch_news_logic(channels, start, end, limit):
         
         for i, channel in enumerate(channels):
             if show_progress: status.text(f"📡 {channel} taranıyor...")
+            
             album_map = {} 
             
             try:
@@ -168,15 +177,18 @@ async def fetch_news_logic(channels, start, end, limit):
                 real_username = entity.username
                 
                 async for msg in client.iter_messages(entity, limit=limit):
+                    # Tarih Filtresi (Saat Hassasiyetli)
                     if msg.date < start: break
                     if msg.date > end: continue
                     
+                    # 1. Metin
                     text_content = ""
                     if msg.text: text_content = msg.text
                     elif msg.message: text_content = msg.message
                     elif hasattr(msg, 'raw_text') and msg.raw_text: text_content = msg.raw_text
                     if text_content is None: text_content = ""
 
+                    # 2. Medya
                     thumb_data = None
                     media_type = "text"
                     if msg.photo or msg.video:
@@ -193,6 +205,7 @@ async def fetch_news_logic(channels, start, end, limit):
                         'grouped_id': msg.grouped_id
                     }
 
+                    # 3. Albüm Kontrolü
                     if msg.grouped_id:
                         if msg.grouped_id in album_map:
                             existing_item = album_map[msg.grouped_id]
@@ -230,9 +243,12 @@ def run_fetch(channels, start, end, limit):
     asyncio.set_event_loop(loop)
     return loop.run_until_complete(fetch_news_logic(channels, start, end, limit))
 
-# --- ANA AKIŞ ---
+# --- ANA İŞLEM AKIŞI ---
+
+# CANLI MOD
 if st.session_state.hunting_mode:
-    st.info("🟢 CANLI HABER AVCISI AKTİF - İzleniyor...")
+    st.info("🟢 CANLI HABER AVCISI AKTİF (Her 15sn güncellenir)")
+    
     now_utc = datetime.now(timezone.utc)
     new_items = run_fetch(final_target_list, st.session_state.last_check_time, now_utc, limit=5)
     
@@ -253,6 +269,7 @@ if st.session_state.hunting_mode:
     time.sleep(15)
     st.rerun()
 
+# MANUEL MOD
 elif fetch_btn:
     st.session_state.news_data = []
     st.session_state.data_fetched = False
@@ -280,6 +297,7 @@ elif fetch_btn:
 # --- SONUÇLAR ---
 if st.session_state.news_data:
     st.divider()
+    
     if not st.session_state.hunting_mode:
         st.subheader("🔎 Sonuç Filtresi")
         result_channels = sorted(list(set([item['kanal'] for item in st.session_state.news_data])))
@@ -318,5 +336,6 @@ if st.session_state.news_data:
                 else:
                     st.info("*(Açıklama yok)*")
                 st.link_button("🔗 Git", item['link'])
+
 elif not st.session_state.data_fetched and not st.session_state.hunting_mode:
-    st.info("👈 Manuel veya Canlı modu başlatın.")
+    st.info("👈 Sol menüden Manuel veya Canlı modu başlatın.")
