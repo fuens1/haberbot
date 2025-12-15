@@ -13,7 +13,6 @@ SESSION_NAME = 'speed_news_session'
 JSON_FILE = 'kanal_listesi.json'
 
 # --- GÜÇLENDİRİLMİŞ REKLAM FİLTRESİ ---
-# Listeyi görseldeki kelimeleri de (reklamveren, komisyon vb.) kapsayacak şekilde genişlettim.
 BLACKLIST_KEYWORDS = [
     # Bahis / Casino
     "bet", "casino", "slot", "bonus", "freespin", "gates of olympus", 
@@ -23,7 +22,7 @@ BLACKLIST_KEYWORDS = [
     "#reklam", " reklam", "(reklam)", "reklamveren", "sponsorlu", 
     "#işbirliği", "iş birliği", "tanıtım", "promo", "discount", "çekiliş",
     
-    # Kripto / Finans Reklamları (Görseldeki gibi)
+    # Kripto / Finans Reklamları
     "%0 komisyon", "limit emri komisyonu", "referans kodu", "üyelik", 
     "yatırım tavsiyesi değildir", "ytd", "kazanç fırsatı", "avantajlı",
     "hoş geldin ödülü", "ayrıcalıklar", "şimdi seninle"
@@ -321,6 +320,15 @@ elif fetch_btn:
 # --- SONUÇLAR ---
 if st.session_state.news_data:
     st.divider()
+    
+    # --- YENİ EKLENEN TEMİZLEME BUTONU ---
+    # Sonuçlar varsa, üst kısımda temizleme butonu gösterir.
+    if st.button("🗑️ LİSTEYİ TEMİZLE", use_container_width=True, type="secondary"):
+        st.session_state.news_data = []
+        st.session_state.data_fetched = False
+        st.rerun()
+    # -------------------------------------
+
     if not st.session_state.hunting_mode:
         st.subheader("🔎 Sonuç Filtresi")
         result_channels = sorted(list(set([item['kanal'] for item in st.session_state.news_data])))
