@@ -271,6 +271,9 @@ def run_fetch(channels, start, end, limit):
 
 # --- ANA AKIŞ: VERİ TOPLAMA ---
 if st.session_state.hunting_mode:
+    # --- MESAJ BURAYA TAŞINDI ---
+    st.info("🟢 CANLI HABER AVCISI AKTİF - İzleniyor... (Her 15 saniyede bir güncellenir)")
+    
     # 1. Veriyi çek
     now_current = datetime.now(MY_TZ)
     new_items = run_fetch(final_target_list, st.session_state.last_check_time, now_current, limit=5)
@@ -321,7 +324,6 @@ if st.session_state.news_data:
         st.rerun()
 
     if st.session_state.hunting_mode:
-        st.info("🟢 CANLI HABER AVCISI ÇALIŞIYOR... (Her 15 saniyede bir güncellenir)")
         display_list = st.session_state.news_data
     else:
         st.subheader("🔎 Sonuç Filtresi")
