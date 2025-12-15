@@ -12,8 +12,17 @@ API_HASH = 'f03a12cf975db6385bcc12dda7ef878d'
 SESSION_NAME = 'speed_news_session'
 JSON_FILE = 'kanal_listesi.json'
 
+# --- REKLAM FİLTRESİ (YENİ) ---
+# Bu kelimelerden herhangi biri mesajda geçerse, o mesaj listeye eklenmez.
+BLACKLIST_KEYWORDS = [
+    "#reklam", " reklam ", "(reklam)", "sponsorlu", "#işbirliği", 
+    "iş birliği", "promo", "discount", "çekiliş", 
+    "bet", "casino", "slot", "bonus", "freespin", 
+    "gates of olympus", "bonanza", "kazanç", "yatırım tavsiyesi değildir",
+    "giriş için", "tıkla kazan", "üyelik"
+]
+
 # --- ZAMAN DİLİMİ AYARI (UTC+2) ---
-# Eğer Türkiye saati (UTC+3) isterseniz parantez içini (hours=3) yapın.
 MY_TZ = timezone(timedelta(hours=2))
 
 # --- SAYFA YAPISI ---
@@ -45,7 +54,6 @@ if 'prepared_channels' not in st.session_state:
 if 'hunting_mode' not in st.session_state:
     st.session_state.hunting_mode = False
 if 'last_check_time' not in st.session_state:
-    # Başlangıç zamanını UTC+2 olarak ayarla
     st.session_state.last_check_time = datetime.now(MY_TZ)
 
 st.title("📥 🚨 Telegram Haber Analizi")
@@ -124,7 +132,6 @@ with st.sidebar:
     
     with tab1:
         st.caption("Geçmiş tarama")
-        # Varsayılan index=1 (Özel Tarih)
         time_mode = st.radio("Zaman:", ["Son 24 Saat", "Özel Tarih"], index=1)
         
         if time_mode == "Son 24 Saat":
@@ -134,22 +141,18 @@ with st.sidebar:
             st.info("💡 Bitiş zamanı otomatik olarak 'ŞU AN' alınır.")
             col1, col2 = st.columns(2)
             
-            # Varsayılan değerler UTC+2'ye göre şu an
             now_in_tz = datetime.now(MY_TZ)
             
             with col1:
                 d1 = st.date_input("📅 Başlangıç Tarihi", value=now_in_tz)
             with col2:
-                # Saat varsayılan olarak 00:00 gelir
                 t1 = st.time_input("⏰ Başlangıç Saati", value=datetime.min.time()) 
             
-            # Başlangıç: Seçilen Gün + Seçilen Saat + UTC+2 Bilgisi
             try:
                 start_dt = datetime.combine(d1, t1).replace(tzinfo=MY_TZ)
             except:
                 start_dt = datetime.combine(d1, t1).astimezone(MY_TZ)
                 
-            # Bitiş: Şu an (UTC+2)
             end_dt = datetime.now(MY_TZ)
 
         msg_limit = st.slider("Limit (Kanal Başına)", 2, 200, 40)
@@ -189,7 +192,6 @@ async def fetch_news_logic(channels, start, end, limit):
                 real_username = entity.username
                 
                 async for msg in client.iter_messages(entity, limit=limit):
-                    # Tarih karşılaştırması (Python timezone aware olduğu için otomatik çevirir)
                     if msg.date < start: break
                     if msg.date > end: continue
                     
@@ -199,6 +201,19 @@ async def fetch_news_logic(channels, start, end, limit):
                     elif hasattr(msg, 'raw_text') and msg.raw_text: text_content = msg.raw_text
                     if text_content is None: text_content = ""
 
+                    # --- REKLAM KONTROLÜ (YENİ) ---
+                    # Metni küçük harfe çevirip yasaklı kelime var mı diye bakıyoruz.
+                    text_lower = text_content.lower()
+                    is_ad = False
+                    for bad_word in BLACKLIST_KEYWORDS:
+                        if bad_word in text_lower:
+                            is_ad = True
+                            break
+                    
+                    if is_ad:
+                        continue # Eğer reklam ise bu mesajı atla
+                    # ------------------------------
+
                     thumb_data = None
                     media_type = "text"
                     if msg.photo or msg.video:
@@ -207,7 +222,7 @@ async def fetch_news_logic(channels, start, end, limit):
 
                     current_item = {
                         'kanal': real_username,
-                        'tarih': msg.date, # Bu tarih orijinal (Genelde UTC gelir)
+                        'tarih': msg.date,
                         'text': text_content,
                         'thumb': thumb_data,
                         'media_type': media_type,
@@ -255,7 +270,6 @@ def run_fetch(channels, start, end, limit):
 # --- ANA AKIŞ ---
 if st.session_state.hunting_mode:
     st.info("🟢 CANLI HABER AVCISI AKTİF - İzleniyor...")
-    # Şu anki zaman UTC+2
     now_current = datetime.now(MY_TZ)
     
     new_items = run_fetch(final_target_list, st.session_state.last_check_time, now_current, limit=5)
@@ -328,7 +342,6 @@ if st.session_state.news_data:
                 else:
                     st.caption("📷 Yok")
             with c2:
-                # EKRANA BASARKEN UTC+2'ye ZORLA
                 local_time = item['tarih'].astimezone(MY_TZ).strftime('%H:%M:%S')
                 date_str = item['tarih'].astimezone(MY_TZ).strftime('%d.%m.%Y')
                 
