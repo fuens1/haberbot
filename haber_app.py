@@ -74,8 +74,7 @@ with st.sidebar:
                 
         st.success(f"Liste hafızaya alındı! ({len(channel_list)} kanal)")
 
-    # --- İNDİRME BUTONU (YENİ) ---
-    # Mevcut hafızadaki listeyi JSON formatına çevir
+    # --- İNDİRME BUTONU ---
     json_string = json.dumps(st.session_state.prepared_channels, indent=2)
     
     st.download_button(
@@ -120,23 +119,35 @@ with st.sidebar:
     
     with tab1:
         st.caption("Geçmiş tarama")
-        time_mode = st.radio("Zaman:", ["Son 24 Saat", "Özel Tarih"], index=0)
+        # GÜNCELLEME: Varsayılan olarak index=1 (Özel Tarih) yapıldı ki saat kutusunu hemen görebilin.
+        time_mode = st.radio("Zaman:", ["Son 24 Saat", "Özel Tarih"], index=1)
         
         if time_mode == "Son 24 Saat":
             end_dt = datetime.now(timezone.utc)
             start_dt = end_dt - timedelta(hours=24)
         else:
-            # GÜNCELLENEN KISIM: Sadece Başlangıç Tarihi ve Saati, Bitiş Anlık
+            # --- YENİ EKLENEN KISIM (BURASI GÖRÜNMÜYORDU) ---
+            st.info("💡 Bitiş zamanı otomatik olarak 'ŞU AN' alınır.")
             col1, col2 = st.columns(2)
-            d1 = col1.date_input("Başlangıç Tarihi", value=datetime.now())
-            t1 = col2.time_input("Başlangıç Saati", value=datetime.min.time()) # Varsayılan 00:00
+            
+            with col1:
+                d1 = st.date_input("📅 Başlangıç Tarihi", value=datetime.now())
+            with col2:
+                # Saat varsayılan olarak 00:00 gelir
+                t1 = st.time_input("⏰ Başlangıç Saati", value=datetime.min.time()) 
             
             # Başlangıç: Seçilen Gün + Seçilen Saat
-            start_dt = datetime.combine(d1, t1).replace(tzinfo=timezone.utc)
+            # replace(tzinfo=timezone.utc) ekleyerek Telegram saatiyle uyumlu hale getiriyoruz.
+            try:
+                start_dt = datetime.combine(d1, t1).replace(tzinfo=timezone.utc)
+            except:
+                # Hata durumunda (timezone çakışması vs) basit bir fallback
+                start_dt = datetime.combine(d1, t1).astimezone(timezone.utc)
+                
             # Bitiş: Şu an (Anlık)
             end_dt = datetime.now(timezone.utc)
 
-        msg_limit = st.slider("Limit", 2, 200, 40)
+        msg_limit = st.slider("Limit (Kanal Başına)", 2, 200, 40)
         fetch_btn = st.button("🚀 Verileri Çek", type="primary", disabled=(len(final_target_list) == 0))
 
     with tab2:
