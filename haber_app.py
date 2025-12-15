@@ -9,7 +9,7 @@ import json
 # --- AYARLAR ---
 API_ID = 32583113
 API_HASH = 'f03a12cf975db6385bcc12dda7ef878d'
-SESSION_NAME = 'final_live_v9'
+SESSION_NAME = 'speed_news_session'
 JSON_FILE = 'kanal_listesi.json'
 
 # --- SAYFA YAPISI ---
@@ -321,3 +321,4 @@ if st.session_state.news_data:
                 st.link_button("🔗 Git", item['link'])
 elif not st.session_state.data_fetched and not st.session_state.hunting_mode:
     st.info("👈 Manuel veya Canlı modu başlatın.")
+
