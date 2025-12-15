@@ -9,13 +9,13 @@ import json
 # --- AYARLAR ---
 API_ID = 32583113
 API_HASH = 'f03a12cf975db6385bcc12dda7ef878d'
-SESSION_NAME = 'speed_news_session'
+SESSION_NAME = 'final_live_v9_fix'
 JSON_FILE = 'kanal_listesi.json'
 
 # --- SAYFA YAPISI ---
 st.set_page_config(page_title="Haber Pro v9", page_icon="📥", layout="wide")
 
-# --- YARDIMCI FONKSİYONLAR ---
+# --- EKSİK OLAN YARDIMCI FONKSİYONLAR ---
 def load_channels_from_file():
     """Dosya varsa oku, yoksa varsayılanları döndür."""
     if os.path.exists(JSON_FILE):
@@ -74,8 +74,7 @@ with st.sidebar:
                 
         st.success(f"Liste hafızaya alındı! ({len(channel_list)} kanal)")
 
-    # --- İNDİRME BUTONU (YENİ) ---
-    # Mevcut hafızadaki listeyi JSON formatına çevir
+    # --- İNDİRME BUTONU ---
     json_string = json.dumps(st.session_state.prepared_channels, indent=2)
     
     st.download_button(
@@ -290,35 +289,4 @@ if st.session_state.news_data:
             with cols[i % 4]:
                 if st.checkbox(f"@{ch}", value=True, key=f"post_{ch}"):
                     selected_view_channels.append(ch)
-        display_list = [n for n in st.session_state.news_data if n['kanal'] in selected_view_channels]
-    else:
-        st.subheader("🔥 Canlı Akış")
-        display_list = st.session_state.news_data
-
-    for item in display_list:
-        with st.container(border=True):
-            c1, c2 = st.columns([1, 4]) 
-            with c1:
-                if item['thumb']:
-                    st.image(item['thumb'], use_container_width=True)
-                    if item['media_type'] == 'video': st.caption("🎥 Video")
-                else:
-                    st.caption("📷 Yok")
-            with c2:
-                local_time = item['tarih'].astimezone().strftime('%H:%M:%S')
-                date_str = item['tarih'].astimezone().strftime('%d.%m.%Y')
-                
-                if st.session_state.hunting_mode:
-                    st.markdown(f"### ⏰ {local_time}")
-                    st.caption(f"{date_str} | @{item['kanal']}")
-                else:
-                    st.caption(f"📅 {date_str} {local_time} | 📢 @{item['kanal']}")
-                
-                if item['text'] and len(item['text'].strip()) > 0:
-                    st.markdown(item['text'])
-                else:
-                    st.info("*(Açıklama yok)*")
-                st.link_button("🔗 Git", item['link'])
-elif not st.session_state.data_fetched and not st.session_state.hunting_mode:
-    st.info("👈 Manuel veya Canlı modu başlatın.")
-
+        display_list = [n for n in st.session_state.news_data if n['kanal'] in selected_view_channels
